@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.17;
+pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
@@ -13,8 +13,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract Nothing is Context, ERC20, ERC20Burnable, Ownable {
     address public feeReceiver; // Address to receive the fees
     address public rewardReceiver; // Address to receive the reward fees
-    uint16 public sellFee = 500; // Sell fee ratio (Default: 5%)
-    uint16 public buyFee = 0; // Buy fee ratio (Default: 0%)
+    uint16 constant public SELL_FEE = 500; // Sell fee ratio (Default: 5%)
     mapping(address => bool) public excludedFromFees; // Fee-excluded accounts
     mapping(address => bool) public marketPairs; // Market pairs
     uint8 private _decimals = 8; // Token decimals
@@ -23,7 +22,6 @@ contract Nothing is Context, ERC20, ERC20Burnable, Ownable {
     event FeeReceiverAddressUpdate(address indexed receiver);
     event RewardFeeReceiverAddressUpdate(address indexed receiver);
     event MarketPairUpdated(address indexed pairAddress, bool state);
-    event FeeRatiosUpdated(uint16 buyFee, uint16 sellFee);
 
     constructor(string memory name_, string memory symbol_, uint initialSupply_) ERC20(name_, symbol_) {
         feeReceiver = _msgSender();
@@ -38,8 +36,10 @@ contract Nothing is Context, ERC20, ERC20Burnable, Ownable {
      */
     function setFeeReceiver(address receiver) public onlyOwner {
         require(receiver != address(0), "Receiver can't be address zero");
-        feeReceiver = receiver;
-        emit FeeReceiverAddressUpdate(receiver);
+        if (feeReceiver != receiver) {
+            feeReceiver = receiver;
+            emit FeeReceiverAddressUpdate(receiver);
+        }
     }
 
     /**
@@ -48,8 +48,10 @@ contract Nothing is Context, ERC20, ERC20Burnable, Ownable {
      */
     function setRewardReceiver(address receiver) public onlyOwner {
         require(receiver != address(0), "Receiver can't be address zero");
-        rewardReceiver = receiver;
-        emit RewardFeeReceiverAddressUpdate(receiver);
+        if (rewardReceiver != receiver) {
+            rewardReceiver = receiver;
+            emit RewardFeeReceiverAddressUpdate(receiver);
+        }
     }
 
     /**
@@ -59,8 +61,10 @@ contract Nothing is Context, ERC20, ERC20Burnable, Ownable {
      */
     function setMarketPair(address pair, bool state) public onlyOwner {
         require(pair != address(0), "Pair can't be address zero");
-        marketPairs[pair] = state;
-        emit MarketPairUpdated(pair, state);
+        if (marketPairs[pair] != state) {
+            marketPairs[pair] = state;
+            emit MarketPairUpdated(pair, state);
+        }
     }
 
     /**
@@ -111,16 +115,13 @@ contract Nothing is Context, ERC20, ERC20Burnable, Ownable {
         uint256 fromBalance = balanceOf(from);
         require(fromBalance >= amount, "ERC20: transfer amount exceeds balance");
 
-        bool isSell = marketPairs[to];
-        bool isBuy = marketPairs[from];
         bool isExcludedFromFees = excludedFromFees[from];
         uint256 taxAmount = 0;
 
         if (!isExcludedFromFees) {
-            if (isSell) {
-                taxAmount = (amount * sellFee / 10_000);
-            } else if (isBuy) {
-                taxAmount = (amount * buyFee / 10_000);
+            // If to == marketPairs::true state, then it is a sell transfer
+            if (marketPairs[to]) {
+                taxAmount = (amount * SELL_FEE / 10_000);
             }
         }
 
