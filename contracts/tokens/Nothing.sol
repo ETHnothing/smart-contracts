@@ -90,15 +90,6 @@ contract Nothing is Context, ERC20, ERC20Burnable, Ownable {
     }
 
     /**
-     * @dev Mint new tokens and assign them to an account.
-     * @param account The account to which new tokens will be assigned.
-     * @param amount The amount of tokens to mint.
-     */
-    function mint(address account, uint256 amount) public onlyOwner {
-        _mint(account, amount);
-    }
-
-    /**
      * @dev Hook that is called before any token transfer.
      * @param from The address from which the tokens are transferred.
      * @param to The address to which the tokens are transferred.
